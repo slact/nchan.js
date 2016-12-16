@@ -1,0 +1,28 @@
+{
+  "name": "nchan",
+  "version": "1.0.0",
+  "description": "Websocket, EventSource & Long-Poll client wrapper for Nchan, a pub/sub server for the modern web.",
+  "main": "NchanSubscriber.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slact/nchan.js.git"
+  },
+  "keywords": [
+    "nchan",
+    "websocket",
+    "eventsource",
+    "long-poll",
+    "client",
+    "subscriber",
+    "wrapper"
+  ],
+  "author": "slact <nchan@slact.net> (https://nchan.slact.net)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/slact/nchan.js/issues"
+  },
+  "homepage": "https://github.com/slact/nchan.js#readme"
+}
