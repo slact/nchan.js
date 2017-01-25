@@ -1,4 +1,4 @@
-= NchanSubscriber.js
+== NchanSubscriber.js
 
 A Websocket, EventSource, and Long-Polling wrapper for [Nchan](https://nchan.slact.net)
 
