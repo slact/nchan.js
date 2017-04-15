@@ -163,7 +163,7 @@ function NchanSubscriber(url, opt) {
       this.stop();
     }
     if(this.sharedRole == "master") {
-      storage.setItem(this.sharedKeys.status, "disconnected");
+      this.sharedStorage.setItem(this.sharedKeys.status, "disconnected");
     }
   }, this);
   global.addEventListener('beforeunload', onUnloadEvent, false);
@@ -182,24 +182,24 @@ function NchanSubscriber(url, opt) {
       }
       
       if(name == "message") {
-        storage.setItem(this.sharedKeys.msgId, data[1] && data[1].id || "");
-        storage.setItem(this.sharedKeys.msgContentType, data[1] && data[1]["content-type"] || "");
-        storage.setItem(this.sharedKeys.msg, data[0]);
+        this.sharedStorage.setItem(this.sharedKeys.msgId, data[1] && data[1].id || "");
+        this.sharedStorage.setItem(this.sharedKeys.msgContentType, data[1] && data[1]["content-type"] || "");
+        this.sharedStorage.setItem(this.sharedKeys.msg, data[0]);
       }
       else if(name == "error") {
         //TODO 
       }
       else if(name == "connecting") {
-        storage.setItem(this.sharedKeys.status, "connecting");
+        this.sharedStorage.setItem(this.sharedKeys.status, "connecting");
       }
       else if(name == "connect") {
-        storage.setItem(this.sharedKeys.status, "connected");
+        this.sharedStorage.setItem(this.sharedKeys.status, "connected");
       }
       else if(name == "reconnect") {
-        storage.setItem(this.sharedKeys.status, "reconnecting");
+        this.sharedStorage.setItem(this.sharedKeys.status, "reconnecting");
       }
       else if(name == "disconnect") {
-        storage.setItem(this.sharedKeys.status, "disconnected");
+        this.sharedStorage.setItem(this.sharedKeys.status, "disconnected");
       }
     }, this);
   }
