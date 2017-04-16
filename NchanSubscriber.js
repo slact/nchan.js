@@ -160,6 +160,9 @@ function NchanSubscriber(url, opt) {
           this.shared.setWithId("master:created", now);
           this.shared.setWithId("master:lastSeen", now);
         }
+        if(role == "slave" && !this.lastMessageId) {
+          this.lastMessageId = this.shared.get("msg:id");
+        }
         this.shared.role = role;
         return this;
       }, this),
