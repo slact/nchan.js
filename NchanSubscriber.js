@@ -148,13 +148,14 @@ function NchanSubscriber(url, opt) {
             return true; //for backwards-compatibility
           }
           var id = val.substring(2, sep);
-          return (id != this.shared.id);
+          return (id != this.shared.id); //ignore own events (accomodations for IE. Fuckin' IE, even after all these years...)
         }
         else {
           return false;
         }
       }, this),
       setRole: ughbind(function(role) {
+        //console.log(this.url, "set shared role to ", role);
         if(role == "master" && this.shared.role != "master") {
           var now = new Date().getTime()/1000;
           this.shared.setWithId("master:created", now);
@@ -168,6 +169,7 @@ function NchanSubscriber(url, opt) {
       }, this),
       
       demoteToSlave: ughbind(function() {
+        //console.log("demote to slave");
         if(this.shared.role != "master") {
           throw "can't demote non-master to slave";
         }
@@ -184,13 +186,16 @@ function NchanSubscriber(url, opt) {
       
       maybePromoteToMaster: ughbind(function() {
         if(!(this.running || this.starting)) {
+          //console.log(this.url, "stopped Subscriber won't be promoted to master");
           return this;
         }
         if(this.shared.maybePromotingToMaster) {
+          //console.log(this.url, " already maybePromotingToMaster");
           return;
         }
         this.shared.maybePromotingToMaster = true;
         
+        //console.log(this.url, "maybe promote to master");
         var processRoll;
         
         var lotteryRoundDuration = 2000;
@@ -227,6 +232,7 @@ function NchanSubscriber(url, opt) {
             }
             
             if(!bestRoll || newVal >= bestRoll) {
+              //console.log("new bestRoll", newVal);
               bestRoll = newVal;
             }
           }
@@ -234,7 +240,9 @@ function NchanSubscriber(url, opt) {
         global.addEventListener("storage", rollCallback);
         
         var finish = ughbind(function() {
+          //console.log("finish");
           this.shared.maybePromotingToMaster = false;
+          //console.log(this.url, this.shared.role);
           global.removeEventListener("storage", rollCallback);
           if(checkRollInterval) {
             clearInterval(checkRollInterval);
@@ -257,19 +265,23 @@ function NchanSubscriber(url, opt) {
         }, this);
         
         processRoll = ughbind(function() {
+          //console.log("roll, bestroll", roll, bestRoll);
           if(roll < bestRoll) {
+            //console.log(this.url, "loser");
             this.shared.setRole("slave");
             finish();
           }
           else if(roll >= bestRoll) {
-            var now = new Date().getTime() / 1000;
-            var lotteryTime = parseFloat(this.shared.getWithId("lotteryTime"));
+            //var now = new Date().getTime() / 1000;
+            //var lotteryTime = parseFloat(this.shared.getWithId("lotteryTime"));
+            //console.log(lotteryTime, now - lotteryRoundDuration/1000);
             if(currentContenders == 0) {
-              console.log("winner, no more contenders!");
+              //console.log("winner, no more contenders!");
               this.shared.setRole("master");
               finish();
             }
             else {
+              //console.log("winning, but have contenders", currentContenders);
               currentContenders = 0;
             }
           }
@@ -466,11 +478,12 @@ NchanSubscriber.prototype.start = function() {
           if(newValue == "disconnected") {
             if(this.shared.role == "slave") {
               //play the promotion lottery
-              //console.log("status changed to disconnected, maybepromotetomaster", ev.newValue, ev.oldValue);
+              //console.log(this.url, "status changed to disconnected, maybepromotetomaster", ev.newValue, ev.oldValue);
               this.shared.maybePromoteToMaster();
             }
             else if(this.shared.role == "master") {
               //do nothing
+              //console.log(this.url, "current role is master, do nothing?...");
             }
           }
         }
@@ -481,7 +494,7 @@ NchanSubscriber.prototype.start = function() {
       }, this);
       global.addEventListener("storage", storageEventListener);
       if(status == "disconnected") {
-        //console.log("status == disconnected, maybepromotetomaster");
+        //console.log(this.url, "status == disconnected, maybepromotetomaster");
         this.shared.maybePromoteToMaster();
       }
       else {
