@@ -19,8 +19,9 @@ opt = {
     //if the HTML5 sessionStore or localStore should be used to resume
     //connections interrupted by a page load
   shared: true or undefined
-    //share connection to same subscriber url between browser windows and tabs 
-    //using localStorage.
+    //share connection to same subscriber url between browser 
+    //windows and tabs using localStorage. In shared mode, 
+    //only 1 running subscriber is allowed per url per window/tab.
 }
 
 
