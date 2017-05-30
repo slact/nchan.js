@@ -459,7 +459,8 @@ NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
 };
 
 var storageEventListener;
-
+var conn = 0
+var maxConn = 3
 NchanSubscriber.prototype.start = function() {
   if(this.running)
     throw "Can't start NchanSubscriber, it's already started.";
@@ -532,16 +533,26 @@ NchanSubscriber.prototype.start = function() {
     }
   }
   else {
-    if(!this.transport) {
-      this.initializeTransport();
+    if (conn<maxConn){
+     if(!this.transport) {
+        this.initializeTransport();
+      }
+      conn++;
+      this.transport.listen(this.url, this.lastMessageId);
+      this.running = true;
+      delete this.starting;
+    }else{
+      conn = 0
+      this.transport = null
+      this.initializeTransport(['longpoll']);
+      this.transport.listen(this.url, this.lastMessageId);
+      this.running = true;
+      delete this.starting;
+      console.log(this.transport)
     }
-    this.transport.listen(this.url, this.lastMessageId);
-    this.running = true;
-    delete this.starting;
   }
   return this;
 };
-
 NchanSubscriber.prototype.stop = function() {
   if(!this.running)
     throw "Can't stop NchanSubscriber, it's not running.";
