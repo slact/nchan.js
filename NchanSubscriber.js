@@ -420,9 +420,9 @@ function NchanSubscriber(url, opt) {
 Emitter(NchanSubscriber.prototype);
 
 NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
-  if(possibleTransports) {
-    this.desiredTransport = possibleTransports;
-  }
+  // if(possibleTransports) {
+  //   this.desiredTransport = possibleTransports;
+  // }
   if(this.shared && this.shared.role == "slave") {
     this.transport = new this.SubscriberClass["__slave"](ughbind(this.emit, this)); //try it
   }
@@ -438,12 +438,9 @@ NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
     }, this);
     
     var i;
-    if(this.desiredTransport) {
-      for(i=0; i<this.desiredTransport.length; i++) {
-        if(tryInitializeTransport(this.desiredTransport[i])) {
-          break;
+    if(possibleTransports) {
+        if(tryInitializeTransport(possibleTransports)) {
         }
-      }
     }
     else {
       for(i in this.SubscriberClass) {
@@ -461,6 +458,8 @@ NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
 var storageEventListener;
 var conn = 0
 var maxConn = 3
+var priorityIndex = 0
+
 NchanSubscriber.prototype.start = function() {
   if(this.running)
     throw "Can't start NchanSubscriber, it's already started.";
@@ -535,7 +534,7 @@ NchanSubscriber.prototype.start = function() {
   else {
     if (conn<maxConn){
      if(!this.transport) {
-        this.initializeTransport();
+        this.initializeTransport(this.desiredTransport[priorityIndex]);
       }
       conn++;
       this.transport.listen(this.url, this.lastMessageId);
@@ -543,12 +542,16 @@ NchanSubscriber.prototype.start = function() {
       delete this.starting;
     }else{
       conn = 0
+      priorityIndex++;
       this.transport = null
-      this.initializeTransport(['longpoll']);
+      if (priorityIndex<this.desiredTransport.length){
+        this.initializeTransport(this.desiredTransport[priorityIndex]);
+      }else{
+        throw "Can't establish Connection!!!"
+      }
       this.transport.listen(this.url, this.lastMessageId);
       this.running = true;
       delete this.starting;
-      console.log(this.transport)
     }
   }
   return this;
