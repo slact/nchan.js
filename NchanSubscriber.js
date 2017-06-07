@@ -547,7 +547,7 @@ NchanSubscriber.prototype.start = function() {
       if (priorityIndex<this.desiredTransport.length){
         this.initializeTransport(this.desiredTransport[priorityIndex]);
       }else{
-        throw "Can't establish Connection!!!"
+        throw "NchanSubscriber: Can't establish Connection!"
       }
       this.transport.listen(this.url, this.lastMessageId);
       this.running = true;
