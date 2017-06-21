@@ -459,6 +459,8 @@ var storageEventListener;
 var conn = 0
 var maxConn = 3
 var priorityIndex = 0
+var connError = false
+var disconnectError = false
 
 NchanSubscriber.prototype.start = function() {
   if(this.running)
@@ -532,6 +534,11 @@ NchanSubscriber.prototype.start = function() {
     }
   }
   else {
+    if (!connError && disconnectError) {
+      conn = 0;
+    }
+    connError = false;
+    disconnectError = false;
     if (conn<maxConn){
      if(!this.transport) {
         this.initializeTransport(this.desiredTransport[priorityIndex]);
@@ -650,11 +657,13 @@ NchanSubscriber.prototype.SubscriberClass = {
       
       l.onerror = ughbind(function(evt) {
         //console.log("error", evt);
+        connError = true;
         this.emit('error', evt, l);
         delete this.listener;
       }, this);
       
       l.onclose = ughbind(function(evt) {
+        disconnectError = true;
         this.emit('__disconnect', evt);
         delete this.listener;
       }, this);
@@ -758,18 +767,22 @@ NchanSubscriber.prototype.SubscriberClass = {
           this.reqStartTime = new Date().getTime();
           this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
         }
-        else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
-          //console.log("abort!!!");
+        else if(code == 408) {
+          this.reqStartTime = new Date().getTime();
+          this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
+        }
+        else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {     
           this.emit("__disconnect", code || 0, response_text);
           delete this.req;
         }
         else if(code !== null) {
           //HTTP error
+          connError = true;
           this.emit("error", code, response_text);
           delete this.req;
         }
         else {
-          //don't care about abortions 
+          //don't care about abortions
           delete this.req;
           this.emit("__disconnect");
           //console.log("abort!");
