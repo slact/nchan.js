@@ -456,11 +456,13 @@ NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
 };
 
 var storageEventListener;
-var conn = 0
-var maxConn = 3
-var priorityIndex = 0
-var connError = false
-var disconnectError = false
+var conn = 0;
+var maxConn = 3;
+var priorityIndex = 0;
+var connError = false;
+var disconnectError = false;
+var time = 5000;
+var timeFactor = 1.3;
 
 NchanSubscriber.prototype.start = function() {
   if(this.running)
@@ -553,12 +555,14 @@ NchanSubscriber.prototype.start = function() {
       this.transport = null
       if (priorityIndex<this.desiredTransport.length){
         this.initializeTransport(this.desiredTransport[priorityIndex]);
+        this.transport.listen(this.url, this.lastMessageId);
+        this.running = true;
+        delete this.starting;
       }else{
-        throw "NchanSubscriber: Can't establish Connection!"
+        priorityIndex = 0;
+        setTimeout(this.start.bind(this), time);
+        time = Math.min(time * timeFactor, 2 * 60 * 1000);
       }
-      this.transport.listen(this.url, this.lastMessageId);
-      this.running = true;
-      delete this.starting;
     }
   }
   return this;
