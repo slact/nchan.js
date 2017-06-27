@@ -76,6 +76,14 @@ var ughbind = (Function.prototype.bind
 );
 
 var sharedSubscriberTable={};
+var conn = 0;
+var maxConn = 3;
+var priorityIndex = 0;
+var connError = false;
+var disconnectError = false;
+var time = 5000;
+var timeFactor = 1.3;
+var maxWaitTime = 120000;
 
 "use strict"; 
 function NchanSubscriber(url, opt) {
@@ -98,6 +106,18 @@ function NchanSubscriber(url, opt) {
   }
   this.desiredTransport = opt.subscriber;
   
+  if(opt.maxTry) {
+    maxConn = opt.maxTry;
+  }
+  if(opt.holdTime) {
+    time = opt.holdTime;
+  }
+  if(opt.timeFactor) {
+    timeFactor = opt.timeFactor;
+  }
+  if(opt.maxWaitTime) {
+    maxWaitTime = opt.maxWaitTime;
+  }
   if(opt.shared) {
     if (!("localStorage" in global)) {
       throw "localStorage unavailable for use in shared NchanSubscriber";
@@ -456,13 +476,6 @@ NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
 };
 
 var storageEventListener;
-var conn = 0;
-var maxConn = 3;
-var priorityIndex = 0;
-var connError = false;
-var disconnectError = false;
-var time = 5000;
-var timeFactor = 1.3;
 
 NchanSubscriber.prototype.start = function() {
   if(this.running)
@@ -561,7 +574,7 @@ NchanSubscriber.prototype.start = function() {
       }else{
         priorityIndex = 0;
         setTimeout(this.start.bind(this), time);
-        time = Math.min(time * timeFactor, 2 * 60 * 1000);
+        time = Math.min(time * timeFactor, maxWaitTime);
       }
     }
   }
