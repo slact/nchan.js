@@ -76,14 +76,14 @@ var ughbind = (Function.prototype.bind
 );
 
 var sharedSubscriberTable={};
-var conn = 0;
-var maxConn = 3;
-var priorityIndex = 0;
-var connError = false;
+var conn = 0;    // counter to save total connection made by one type of connector.
+var maxConn = 3;  // Switch to different protocol if it is reached to conn reached to maxConn.
+var priorityIndex = 0; // Counter to switch to another protocol type.
+var connError = false;   // This helps to differentiate the errors and timeout of connection.
 var disconnectError = false;
-var time = 5000;
-var timeFactor = 1.3;
-var maxWaitTime = 120000;
+var time = 5000;  // Hold time after iterating through every connection type.
+var timeFactor = 1.3; // Increase hold time by timefactor.
+var maxWaitTime = 120000;   // Put cap on hold time upto 2 mins.
 
 "use strict"; 
 function NchanSubscriber(url, opt) {
@@ -440,6 +440,9 @@ function NchanSubscriber(url, opt) {
 Emitter(NchanSubscriber.prototype);
 
 NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
+  // This is commented out because the original client is not sending any data.
+  // We are reinitializing our client to unable the websocket fallback. 
+  // this.desiredTransport contains all the mentioned type of connection protocols.
   // if(possibleTransports) {
   //   this.desiredTransport = possibleTransports;
   // }
@@ -549,6 +552,10 @@ NchanSubscriber.prototype.start = function() {
     }
   }
   else {
+    // First it will select one protocol and try to establish connection upto maxConn type.
+    // If it fails alll the time then it will switch to next protocol.
+    // If all the configured protocols fail to establish connection then client will go on hold state.
+    // It will wait upto holdtime and then it will again try to make connection using configured protocols.
     if (!connError && disconnectError) {
       conn = 0;
     }
