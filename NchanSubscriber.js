@@ -79,7 +79,7 @@ var sharedSubscriberTable={};
 
 "use strict"; 
 function NchanSubscriber(url, opt) {
-  if(this === window) {
+  if(typeof window !== "undefined" && this === window) {
     throw "use 'new NchanSubscriber(...)' to initialize";
   }
   
