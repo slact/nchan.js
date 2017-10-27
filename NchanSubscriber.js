@@ -587,6 +587,9 @@ NchanSubscriber.prototype.SubscriberClass = {
       if(typeof window == "object") {
         loc = window.location;
       }
+      else if(typeof document == "object") {
+        loc = document.location;
+      }
       
       if(!protocol && loc) {
         protocol = loc.protocol;
