@@ -1,6 +1,6 @@
 {
   "name": "nchan",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Websocket, EventSource & Long-Poll client wrapper for Nchan, a pub/sub server for the modern web.",
   "main": "NchanSubscriber.js",
   "scripts": {
