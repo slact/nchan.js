@@ -600,8 +600,8 @@
         else if(protocol == "http:") {
           protocol = "ws:";
         }
-        else {
-          protocol = "wss:"; //default setting: secure
+        else if(protocol != "ws:") {
+          protocol = "wss:"; //default setting: secure, unless "ws:" explicitly specified
         }
         
         if(!host && loc) {
