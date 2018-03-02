@@ -744,8 +744,10 @@
               this.emit("message", response_text || "", {"content-type": content_type, "id": this.msgIdFromResponseHeaders(req)});
             }
             
-            this.reqStartTime = new Date().getTime();
-            this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
+            if (this.req) { //this check is needed because stop() may have been called in the message callback
+              this.reqStartTime = new Date().getTime();
+              this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
+            }
           }
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
             //console.log("abort!!!");
