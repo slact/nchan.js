@@ -744,7 +744,7 @@
               this.emit("message", response_text || "", {"content-type": content_type, "id": this.msgIdFromResponseHeaders(req)});
             }
             
-            if (this.req) {
+            if (this.req) { //this check is needed because stop() may have been called in the message callback
               this.reqStartTime = new Date().getTime();
               this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
             }
