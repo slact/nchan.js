@@ -597,6 +597,7 @@
       WSWrapper.prototype.setup = function() {
         this.emit("transportSetup", this.name, this.opt);
         var count = 0;
+        var property;
         for ( property in this.opt.headers ) count++;
         if (count != 1 && "Sec-WebSocket-Protocol" in this.opt.headers) {
           throw "WebSocket only supports one header; Sec-WebSocket-Protocol";
@@ -706,6 +707,7 @@
       ESWrapper.prototype.setup = function() {
         this.emit("transportSetup", this.name, this.opt);
         var count = 0;
+        var property;
         for ( property in this.opt.headers ) count++;
         if (count != 0) {
           throw "EventSource does not support headers";
@@ -777,6 +779,7 @@
       Longpoll.prototype.setup = function() {
         this.emit("transportSetup", this.name, this.opt);
         var count = 0;
+        var property;
         for ( property in this.opt.headers ) count++;
       };
 
@@ -915,6 +918,7 @@
       LocalStoreSlaveTransport.prototype.setup = function() {
         this.emit("transportSetup", this.name, this.opt);
         var count = 0;
+        var property;
         for ( property in this.opt.headers ) count++;
         if (count != 0) {
           throw "__slave does not support headers";
