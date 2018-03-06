@@ -14,14 +14,14 @@
  *     //only 1 running subscriber is allowed per url per window/tab.
  * }
  * 
- * sub.on("transportSetup", function(subscriber, opt) {
- *   // subscriber is a string
+ * sub.on("transportSetup", function(opt, subscriberName) {
  *   // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
+ *   // subscriberName is a string
  * });
  * 
- * sub.on("transportNativeCreated", function(subscriber, nativeTransportObject) {
- *   // subscriber is a string
+ * sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
  *   // nativeTransportObject is the native transport object and depends on the subscriber type
+ *   // subscriberName is a string
  * });
  * 
  * sub.on("message", function(message, message_metadata) {
@@ -595,7 +595,7 @@
       }
 
       WSWrapper.prototype.setup = function() {
-        this.emit("transportSetup", this.name, this.opt);
+        this.emit("transportSetup", this.opt, this.name);
         var count = 0;
         var property;
         for ( property in this.opt.headers ) count++;
@@ -658,7 +658,7 @@
         //console.log(url);
         this.listener = new WebSocket(url, this.opt.headers["Sec-WebSocket-Protocol"]);
         var l = this.listener;
-        this.emit("transportNativeCreated", this.name, l);
+        this.emit("transportNativeCreated", l, this.name);
         l.onmessage = ughbind(function(evt) {
           var m = evt.data.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
           this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});
@@ -705,7 +705,7 @@
       }
 
       ESWrapper.prototype.setup = function() {
-        this.emit("transportSetup", this.name, this.opt);
+        this.emit("transportSetup", this.opt, this.name);
         var count = 0;
         var property;
         for ( property in this.opt.headers ) count++;
@@ -724,7 +724,7 @@
         url = addLastMsgIdToQueryString(this.opt.url, this.opt.msgid);
         this.listener = new EventSource(url);
         var l = this.listener;
-        this.emit("transportNativeCreated", this.name, l);
+        this.emit("transportNativeCreated", l, this.name);
         l.onmessage = ughbind(function(evt){
           //console.log("message", evt);
           this.emit("message", evt.data, {id: evt.lastEventId});
@@ -777,7 +777,7 @@
       }
 
       Longpoll.prototype.setup = function() {
-        this.emit("transportSetup", this.name, this.opt);
+        this.emit("transportSetup", this.opt, this.name);
         var count = 0;
         var property;
         for ( property in this.opt.headers ) count++;
@@ -815,7 +815,7 @@
             if (this.req) { //this check is needed because stop() may have been called in the message callback
               this.reqStartTime = new Date().getTime();
               this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
-              this.emit("transportNativeCreated", this.name, this.req);
+              this.emit("transportNativeCreated", this.req, this.name);
             }
           }
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
@@ -838,7 +838,7 @@
         
         this.reqStartTime = new Date().getTime();
         this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
-        this.emit("transportNativeCreated", this.name, this.req);
+        this.emit("transportNativeCreated", this.req, this.name);
         this.emit("connect");
         
         return this;
@@ -916,7 +916,7 @@
       }
 
       LocalStoreSlaveTransport.prototype.setup = function() {
-        this.emit("transportSetup", this.name, this.opt);
+        this.emit("transportSetup", this.opt, this.name);
         var count = 0;
         var property;
         for ( property in this.opt.headers ) count++;
@@ -938,7 +938,7 @@
           }
         }, this);
         global.addEventListener("storage", this.statusChangeChecker);
-        //this.emit("transportNativeCreated", this.name, this);
+        //this.emit("transportNativeCreated", this, this.name);
       };
         
       LocalStoreSlaveTransport.prototype.cancel = function() {
