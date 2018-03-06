@@ -24,6 +24,15 @@ opt = {
     //only 1 running subscriber is allowed per url per window/tab.
 }
 
+sub.on("transportSetup", function(subscriber, opt) {
+  // subscriber is a string
+  // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
+});
+
+sub.on("transportNativeCreated", function(subscriber, nativeTransportObject) {
+  // subscriber is a string
+  // nativeTransportObject is the native transport object and depends on the subscriber type
+});
 
 sub.on("message", function(message, message_metadata) {
   // message is a string

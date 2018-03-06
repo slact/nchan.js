@@ -14,6 +14,16 @@
  *     //only 1 running subscriber is allowed per url per window/tab.
  * }
  * 
+ * sub.on("transportSetup", function(subscriber, opt) {
+ *   // subscriber is a string
+ *   // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
+ * });
+ * 
+ * sub.on("transportNativeCreated", function(subscriber, nativeTransportObject) {
+ *   // subscriber is a string
+ *   // nativeTransportObject is the native transport object and depends on the subscriber type
+ * });
+ * 
  * sub.on("message", function(message, message_metadata) {
  *   // message is a string
  *   // message_metadata may contain 'id' and 'content-type'
@@ -574,8 +584,25 @@
       function WSWrapper(emit) {
         WebSocket;
         this.emit = emit;
+        this.name = "websocket";
+        this.opt = {
+          url: null,
+          msgid: null,
+          headers : {
+            'Sec-WebSocket-Protocol' : "ws+meta.nchan"
+          }
+        }
       }
-      
+
+      WSWrapper.prototype.setup = function() {
+        this.emit("transportSetup", this.name, this.opt);
+        var count = 0;
+        for ( property in this.opt.headers ) count++;
+        if (count != 1 && "Sec-WebSocket-Protocol" in this.opt.headers) {
+          throw "WebSocket only supports one header; Sec-WebSocket-Protocol";
+        }
+      };
+
       WSWrapper.prototype.websocketizeURL = function(url) {
         var m = url.match(/^((\w+:)?\/\/([^/]+))?(\/)?(.*)/);
         var protocol = m[2];
@@ -619,14 +646,18 @@
       };
       
       WSWrapper.prototype.listen = function(url, msgid) {
-        url = this.websocketizeURL(url);
-        url = addLastMsgIdToQueryString(url, msgid);
-        //console.log(url);
         if(this.listener) {
           throw "websocket already listening";
         }
-        this.listener = new WebSocket(url, "ws+meta.nchan");
+        this.opt.url = url;
+        this.opt.msgid = msgid;
+        this.setup();
+        url = this.websocketizeURL(this.opt.url);
+        url = addLastMsgIdToQueryString(url, this.opt.msgid);
+        //console.log(url);
+        this.listener = new WebSocket(url, this.opt.headers["Sec-WebSocket-Protocol"]);
         var l = this.listener;
+        this.emit("transportNativeCreated", this.name, l);
         l.onmessage = ughbind(function(evt) {
           var m = evt.data.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
           this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});
@@ -663,15 +694,35 @@
       function ESWrapper(emit) {
         EventSource;
         this.emit = emit;
+        this.name = "eventsource";
+        this.opt = {
+            url: null,
+            msgid: null,
+            headers : {
+          }
+        }
       }
-      
+
+      ESWrapper.prototype.setup = function() {
+        this.emit("transportSetup", this.name, this.opt);
+        var count = 0;
+        for ( property in this.opt.headers ) count++;
+        if (count != 0) {
+          throw "EventSource does not support headers";
+        }
+      };
+
       ESWrapper.prototype.listen= function(url, msgid) {
-        url = addLastMsgIdToQueryString(url, msgid);
         if(this.listener) {
           throw "there's a ES listener running already";
         }
+        this.opt.url = url;
+        this.opt.msgid = msgid;
+        this.setup();
+        url = addLastMsgIdToQueryString(this.opt.url, this.opt.msgid);
         this.listener = new EventSource(url);
         var l = this.listener;
+        this.emit("transportNativeCreated", this.name, l);
         l.onmessage = ughbind(function(evt){
           //console.log("message", evt);
           this.emit("message", evt.data, {id: evt.lastEventId});
@@ -711,25 +762,39 @@
     
     "longpoll": (function () {
       function Longpoll(emit) {
-        this.headers = {};
         this.longPollStartTime = null;
         this.maxLongPollTime = 5*60*1000; //5 minutes
         this.emit = emit;
+        this.name = "longpoll";
+        this.opt = {
+          url: null,
+          msgid: null,
+          headers : {
+          }
+        }
       }
-      
+
+      Longpoll.prototype.setup = function() {
+        this.emit("transportSetup", this.name, this.opt);
+        var count = 0;
+        for ( property in this.opt.headers ) count++;
+      };
+
       Longpoll.prototype.listen = function(url, msgid) {
         if(this.req) {
           throw "already listening";
         }
-        if(url) { this.url=url; }
-        var setHeader = ughbind(function(incoming, name) {
-          if(incoming) { this.headers[name]= incoming; }
-        }, this);
-        
+        this.opt.url = url;
+        this.opt.msgid = msgid;
         if(msgid) {
-          this.headers = {"Etag": msgid};
+          this.opt.headers["Etag"] = msgid;
         }
-        
+        this.setup();
+
+        var setHeader = ughbind(function(incoming, name) {
+          if(incoming) { this.opt.headers[name]= incoming; }
+        }, this);
+
         this.reqStartTime = new Date().getTime();
         
         var  requestCallback;
@@ -746,7 +811,8 @@
             
             if (this.req) { //this check is needed because stop() may have been called in the message callback
               this.reqStartTime = new Date().getTime();
-              this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
+              this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
+              this.emit("transportNativeCreated", this.name, this.req);
             }
           }
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
@@ -768,7 +834,8 @@
         }, this);
         
         this.reqStartTime = new Date().getTime();
-        this.req = nanoajax.ajax({url: this.url, headers: this.headers}, requestCallback);
+        this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
+        this.emit("transportNativeCreated", this.name, this.req);
         this.emit("connect");
         
         return this;
@@ -835,10 +902,29 @@
       function LocalStoreSlaveTransport(emit) {
         this.emit = emit;
         this.doNotReconnect = true;
+        this.shared = null;
+        this.name = "__slave";
+        this.opt = {
+          url: null,
+          msgid: null,
+          headers : {
+          }
+        }
       }
-      
+
+      LocalStoreSlaveTransport.prototype.setup = function() {
+        this.emit("transportSetup", this.name, this.opt);
+        var count = 0;
+        for ( property in this.opt.headers ) count++;
+        if (count != 0) {
+          throw "__slave does not support headers";
+        }
+      };
+
       LocalStoreSlaveTransport.prototype.listen = function(url, shared) {
         this.shared = shared;
+        this.opt.url = url;  
+        this.setup();
         this.statusChangeChecker = ughbind(function(ev) {
           if(this.shared.matchEventKey(ev, "msg")) {
             var msgId = this.shared.get("msg:id");
@@ -848,6 +934,7 @@
           }
         }, this);
         global.addEventListener("storage", this.statusChangeChecker);
+        //this.emit("transportNativeCreated", this.name, this);
       };
         
       LocalStoreSlaveTransport.prototype.cancel = function() {
