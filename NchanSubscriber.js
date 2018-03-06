@@ -17,6 +17,9 @@
  * sub.on("transportSetup", function(opt, subscriberName) {
  *   // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
  *   // subscriberName is a string
+ *   //
+ *   // longpoll transport supports;
+ *   //   opt.pollDelay - time in milliseconds before starting the next request after the current requests finishes
  * });
  * 
  * sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
@@ -772,6 +775,7 @@
     "longpoll": (function () {
       function Longpoll(emit) {
         this.pollingRequest = null;
+        this.nextRequestTimer = null;
         this.longPollStartTime = null;
         this.maxLongPollTime = 5*60*1000; //5 minutes
         this.emit = emit;
@@ -779,6 +783,7 @@
         this.opt = {
           url: null,
           msgid: null,
+          pollDelay: 0,
           headers : {
           }
         }
@@ -810,6 +815,7 @@
           if (this.req) {
             this.emit("transportNativeBeforeDestroy", this.req, this.name);
           }
+          this.nextRequestTimer = null;
           this.reqStartTime = new Date().getTime();
           this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
           this.emit("transportNativeCreated", this.req, this.name);
@@ -825,8 +831,13 @@
             if (!this.parseMultipartMixedMessage(content_type, response_text, req)) {
               this.emit("message", response_text || "", {"content-type": content_type, "id": this.msgIdFromResponseHeaders(req)});
             }
+            
             if (this.req) { //this check is needed because stop() may have been called in the message callback
-              this.pollingRequest();
+              if (this.opt.pollDelay == 0) {
+                this.pollingRequest();
+              } else {
+                this.nextRequestTimer = global.setTimeout(this.pollingRequest, this.opt.pollDelay);
+              }
             }
           }
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
@@ -905,7 +916,23 @@
           this.req.abort();
           delete this.req;
         }
+        this.cancelPendingPollRequest();
         return this; 
+      };
+
+      Longpoll.prototype.cancelPendingPollRequest = function() {
+        if (this.nextRequestTimer) {
+          global.clearTimeout(this.nextRequestTimer);
+          this.nextRequestTimer = null;
+        }
+      };
+
+      Longpoll.prototype.reschedulePendingPollRequest = function(pollDelay) {
+        this.opt.pollDelay = pollDelay;
+        if (this.nextRequestTimer) {
+            this.cancelPendingPollRequest();
+            this.pollingRequest();
+        }
       };
       
       return Longpoll;

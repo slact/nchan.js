@@ -27,6 +27,9 @@ opt = {
 sub.on("transportSetup", function(opt, subscriberName) {
   // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
   // subscriberName is a string
+  //
+  // longpoll transport supports;
+  //   opt.pollDelay - time in milliseconds before starting the next request after the current requests finishes
 });
 
 sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
