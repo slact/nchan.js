@@ -34,6 +34,11 @@ sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName)
   // subscriberName is a string
 });
 
+sub.on("transportNativeBeforeDestroy", function(nativeTransportObject, subscriberName) {
+  // nativeTransportObject is the native transport object and depends on the subscriber type
+  // subscriberName is a string
+});
+
 sub.on("message", function(message, message_metadata) {
   // message is a string
   // message_metadata is a hash that may contain 'id' and 'content-type'

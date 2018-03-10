@@ -23,7 +23,12 @@
  *   // nativeTransportObject is the native transport object and depends on the subscriber type
  *   // subscriberName is a string
  * });
- * 
+ *
+ * sub.on("transportNativeBeforeDestroy", function(nativeTransportObject, subscriberName) {
+ *   // nativeTransportObject is the native transport object and depends on the subscriber type
+ *   // subscriberName is a string
+ * });
+ *
  * sub.on("message", function(message, message_metadata) {
  *   // message is a string
  *   // message_metadata may contain 'id' and 'content-type'
@@ -683,6 +688,7 @@
       
       WSWrapper.prototype.cancel = function() {
         if(this.listener) {
+          this.emit("transportNativeBeforeDestroy", this.listener, this.name);
           this.listener.close();
           delete this.listener;
         }
@@ -754,6 +760,7 @@
       
       ESWrapper.prototype.cancel= function() {
         if(this.listener) {
+          this.emit("transportNativeBeforeDestroy", this.listener, this.name);
           this.listener.close();
           delete this.listener;
         }
@@ -764,6 +771,7 @@
     
     "longpoll": (function () {
       function Longpoll(emit) {
+        this.pollingRequest = null;
         this.longPollStartTime = null;
         this.maxLongPollTime = 5*60*1000; //5 minutes
         this.emit = emit;
@@ -798,8 +806,14 @@
           if(incoming) { this.opt.headers[name]= incoming; }
         }, this);
 
-        this.reqStartTime = new Date().getTime();
-        
+        this.pollingRequest = ughbind(function() {
+          if (this.req) {
+            this.emit("transportNativeBeforeDestroy", this.req, this.name);
+          }
+          this.reqStartTime = new Date().getTime();
+          this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
+          this.emit("transportNativeCreated", this.req, this.name);
+        }, this);
         var  requestCallback;
         requestCallback = ughbind(function (code, response_text, req) {
           setHeader(req.getResponseHeader("Last-Modified"), "If-Modified-Since");
@@ -811,11 +825,8 @@
             if (!this.parseMultipartMixedMessage(content_type, response_text, req)) {
               this.emit("message", response_text || "", {"content-type": content_type, "id": this.msgIdFromResponseHeaders(req)});
             }
-            
             if (this.req) { //this check is needed because stop() may have been called in the message callback
-              this.reqStartTime = new Date().getTime();
-              this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
-              this.emit("transportNativeCreated", this.req, this.name);
+              this.pollingRequest();
             }
           }
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
@@ -836,9 +847,7 @@
           }
         }, this);
         
-        this.reqStartTime = new Date().getTime();
-        this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
-        this.emit("transportNativeCreated", this.req, this.name);
+        this.pollingRequest();
         this.emit("connect");
         
         return this;
@@ -892,6 +901,7 @@
       
       Longpoll.prototype.cancel = function() {
         if(this.req) {
+          this.emit("transportNativeBeforeDestroy", this.req, this.name);
           this.req.abort();
           delete this.req;
         }
