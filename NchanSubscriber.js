@@ -665,8 +665,12 @@
         var l = this.listener;
         this.emit("transportNativeCreated", l, this.name);
         l.onmessage = ughbind(function(evt) {
-          var m = evt.data.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
-          this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});
+          if (evt.data instanceof Blob) {
+            this.emit("message", evt.data, {"id": msgid, "content-type": 'blob'});      
+          } else {
+            var m = evt.data.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
+            this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});        
+          }
         }, this);
         
         l.onopen = ughbind(function(evt) {
