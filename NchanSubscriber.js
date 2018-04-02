@@ -666,10 +666,18 @@
         this.emit("transportNativeCreated", l, this.name);
         l.onmessage = ughbind(function(evt) {
           if (evt.data instanceof Blob) {
-            this.emit("message", evt.data, {"id": msgid, "content-type": 'blob'});      
+            //extract header, preserve rest of blob.
+            //let's assume the header ends in the first 255 chars
+            var headerSlice = evt.data.slice(0, 255);
+            var reader = new FileReader();
+            reader.addEventListener("loadend", ughbind(function() {
+              var m = reader.result.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
+              this.emit("message", evt.data.slice(m[0].length), {"id": m[1], "content-type": m[3]});
+            }, this));
+            reader.readAsText(headerSlice)
           } else {
             var m = evt.data.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
-            this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});        
+            this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});
           }
         }, this);
         
