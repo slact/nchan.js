@@ -19,7 +19,7 @@
  *   // subscriberName is a string
  *   //
  *   // longpoll transport supports;
- *   //   opt.pollDelay - time in milliseconds before starting the next request after the current requests finishes
+ *   //   opt.longpoll.pollDelay - time in milliseconds before starting the next request after the current requests finishes
  * });
  * 
  * sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
@@ -783,8 +783,10 @@
         this.opt = {
           url: null,
           msgid: null,
-          pollDelay: 0,
           headers : {
+          },
+          longpoll: {
+              pollDelay: 0,
           }
         }
       }
@@ -833,10 +835,10 @@
             }
             
             if (this.req) { //this check is needed because stop() may have been called in the message callback
-              if (this.opt.pollDelay == 0) {
+              if (this.opt.longpoll.pollDelay == 0) {
                 this.pollingRequest();
               } else {
-                this.nextRequestTimer = global.setTimeout(this.pollingRequest, this.opt.pollDelay);
+                this.nextRequestTimer = global.setTimeout(this.pollingRequest, this.opt.longpoll.pollDelay);
               }
             }
           }
@@ -928,7 +930,7 @@
       };
 
       Longpoll.prototype.reschedulePendingPollRequest = function(pollDelay) {
-        this.opt.pollDelay = pollDelay;
+        this.opt.longpoll.pollDelay = pollDelay;
         this.cancelPendingPollRequest();
         if (!this.req) {
             this.pollingRequest();

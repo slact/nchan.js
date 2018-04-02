@@ -29,7 +29,7 @@ sub.on("transportSetup", function(opt, subscriberName) {
   // subscriberName is a string
   //
   // longpoll transport supports;
-  //   opt.pollDelay - time in milliseconds before starting the next request after the current requests finishes
+  //   opt.longpoll.pollDelay - time in milliseconds before starting the next request after the current requests finishes
 });
 
 sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
