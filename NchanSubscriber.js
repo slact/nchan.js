@@ -845,16 +845,16 @@
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
             //console.log("abort!!!");
             this.emit("__disconnect", code || 0, response_text);
-            delete this.req;
+            this.cancel();
           }
           else if(code !== null) {
             //HTTP error
             this.emit("error", code, response_text);
-            delete this.req;
+            this.cancel();
           }
           else {
             //don't care about abortions 
-            delete this.req;
+            this.cancel();
             this.emit("__disconnect");
             //console.log("abort!");
           }
