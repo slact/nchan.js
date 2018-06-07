@@ -931,9 +931,11 @@
 
       Longpoll.prototype.reschedulePendingPollRequest = function(pollDelay) {
         this.opt.longpoll.pollDelay = pollDelay;
-        this.cancelPendingPollRequest();
-        if (!this.req) {
+        this.cancel();
+        if (this.opt.longpoll.pollDelay === 0) {
             this.pollingRequest();
+        } else {
+          this.nextRequestTimer = global.setTimeout(this.pollingRequest, this.opt.longpoll.pollDelay);
         }
       };
       
