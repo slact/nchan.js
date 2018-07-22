@@ -17,6 +17,11 @@
  * sub.on("transportSetup", function(opt, subscriberName) {
  *   // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
  *   // subscriberName is a string
+ *   //
+ *   // longpoll transport supports:
+ *   //   opt.longpoll.pollDelay - delay in milliseconds between successful requests
+ *   // eventsource transport supports:
+ *   //   opt.eventsource.withCredentials - boolean enabling the withCredentials CORS setting
  * });
  * 
  * sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
@@ -434,6 +439,20 @@
 
   Emitter(NchanSubscriber.prototype);
 
+  var defaultTransportOptions = function() {
+    var opt = {
+      url: null,
+      msgid: null,
+      headers : {}
+    };
+    for(var n in NchanSubscriber.prototype.SubscriberClass) {
+      if(n != "__slave") {
+        opt[n]={};
+      }
+    }
+    return opt;
+  };
+  
   NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
     if(possibleTransports) {
       this.desiredTransport = possibleTransports;
@@ -590,14 +609,9 @@
         WebSocket;
         this.emit = emit;
         this.name = "websocket";
-        this.opt = {
-          url: null,
-          msgid: null,
-          headers : {
-            'Sec-WebSocket-Protocol' : "ws+meta.nchan"
-          }
-        }
-      }
+        this.opt = defaultTransportOptions()
+        this.opt.headers["Sec-WebSocket-Protocol"]="ws+meta.nchan"
+      };
 
       WSWrapper.prototype.setup = function() {
         this.emit("transportSetup", this.opt, this.name);
@@ -714,12 +728,8 @@
         EventSource;
         this.emit = emit;
         this.name = "eventsource";
-        this.opt = {
-            url: null,
-            msgid: null,
-            headers : {
-          }
-        }
+        this.opt = defaultTransportOptions();
+        this.opt.eventsource.withCredentials = false;
       }
 
       ESWrapper.prototype.setup = function() {
@@ -740,7 +750,7 @@
         this.opt.msgid = msgid;
         this.setup();
         url = addLastMsgIdToQueryString(this.opt.url, this.opt.msgid);
-        this.listener = new EventSource(url);
+        this.listener = new EventSource(url, this.opt.eventsource);
         var l = this.listener;
         this.emit("transportNativeCreated", l, this.name);
         l.onmessage = ughbind(function(evt){
@@ -784,16 +794,13 @@
     "longpoll": (function () {
       function Longpoll(emit) {
         this.pollingRequest = null;
+        this.nextRequestTimer = null;
         this.longPollStartTime = null;
         this.maxLongPollTime = 5*60*1000; //5 minutes
         this.emit = emit;
         this.name = "longpoll";
-        this.opt = {
-          url: null,
-          msgid: null,
-          headers : {
-          }
-        }
+        this.opt = defaultTransportOptions();
+        this.opt.longpoll.pollDelay = 0;
       }
 
       Longpoll.prototype.setup = function() {
@@ -822,6 +829,7 @@
           if (this.req) {
             this.emit("transportNativeBeforeDestroy", this.req, this.name);
           }
+          this.nextRequestTimer = null;
           this.reqStartTime = new Date().getTime();
           this.req = nanoajax.ajax({url: this.opt.url, headers: this.opt.headers}, requestCallback);
           this.emit("transportNativeCreated", this.req, this.name);
@@ -837,23 +845,28 @@
             if (!this.parseMultipartMixedMessage(content_type, response_text, req)) {
               this.emit("message", response_text || "", {"content-type": content_type, "id": this.msgIdFromResponseHeaders(req)});
             }
+            
             if (this.req) { //this check is needed because stop() may have been called in the message callback
-              this.pollingRequest();
+              if (this.opt.longpoll.pollDelay == 0) {
+                this.pollingRequest();
+              } else {
+                this.nextRequestTimer = global.setTimeout(this.pollingRequest, this.opt.longpoll.pollDelay);
+              }
             }
           }
           else if((code == 0 && response_text == "Error" && req.readyState == 4) || (code === null && response_text != "Abort")) {
             //console.log("abort!!!");
             this.emit("__disconnect", code || 0, response_text);
-            delete this.req;
+            this.cancel();
           }
           else if(code !== null) {
             //HTTP error
             this.emit("error", code, response_text);
-            delete this.req;
+            this.cancel();
           }
           else {
             //don't care about abortions 
-            delete this.req;
+            this.cancel();
             this.emit("__disconnect");
             //console.log("abort!");
           }
@@ -917,9 +930,17 @@
           this.req.abort();
           delete this.req;
         }
+        this.cancelPendingPollRequest();
         return this; 
       };
-      
+
+      Longpoll.prototype.cancelPendingPollRequest = function() {
+        if (this.nextRequestTimer) {
+          global.clearTimeout(this.nextRequestTimer);
+          this.nextRequestTimer = null;
+        }
+      };
+
       return Longpoll;
     })(),
     
@@ -929,12 +950,7 @@
         this.doNotReconnect = true;
         this.shared = null;
         this.name = "__slave";
-        this.opt = {
-          url: null,
-          msgid: null,
-          headers : {
-          }
-        }
+        this.opt = defaultTransportOptions();
       }
 
       LocalStoreSlaveTransport.prototype.setup = function() {
@@ -974,4 +990,3 @@
 
   return NchanSubscriber;
 });
-
