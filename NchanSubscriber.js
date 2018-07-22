@@ -20,6 +20,8 @@
  *   //
  *   // longpoll transport supports:
  *   //   opt.longpoll.pollDelay - delay in milliseconds between successful requests
+ *   // eventsource transport supports:
+ *   //   opt.eventsource.withCredentials - boolean enabling the withCredentials CORS setting
  * });
  * 
  * sub.on("transportNativeCreated", function(nativeTransportObject, subscriberName) {
@@ -736,7 +738,7 @@
         this.opt.msgid = msgid;
         this.setup();
         url = addLastMsgIdToQueryString(this.opt.url, this.opt.msgid);
-        this.listener = new EventSource(url);
+        this.listener = new EventSource(url, this.opt.eventsource);
         var l = this.listener;
         this.emit("transportNativeCreated", l, this.name);
         l.onmessage = ughbind(function(evt){
@@ -976,4 +978,3 @@
 
   return NchanSubscriber;
 });
-
