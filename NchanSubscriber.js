@@ -18,7 +18,7 @@
  *   // opt is a hash/object - not all transports support all options equally. Only longpoll supports arbitrary headers
  *   // subscriberName is a string
  *   //
- *   // longpoll transport supports;
+ *   // longpoll transport supports:
  *   //   opt.longpoll.pollDelay - delay in milliseconds between successful requests
  * });
  * 
@@ -437,6 +437,20 @@
 
   Emitter(NchanSubscriber.prototype);
 
+  var defaultTransportOptions = function() {
+    var opt = {
+      url: null,
+      msgid: null,
+      headers : {}
+    };
+    for(var n in NchanSubscriber.prototype.SubscriberClass) {
+      if(n != "__slave") {
+        opt[n]={};
+      }
+    }
+    return opt;
+  };
+  
   NchanSubscriber.prototype.initializeTransport = function(possibleTransports) {
     if(possibleTransports) {
       this.desiredTransport = possibleTransports;
@@ -593,14 +607,9 @@
         WebSocket;
         this.emit = emit;
         this.name = "websocket";
-        this.opt = {
-          url: null,
-          msgid: null,
-          headers : {
-            'Sec-WebSocket-Protocol' : "ws+meta.nchan"
-          }
-        }
-      }
+        this.opt = defaultTransportOptions()
+        this.opt.headers["Sec-WebSocket-Protocol"]="ws+meta.nchan"
+      };
 
       WSWrapper.prototype.setup = function() {
         this.emit("transportSetup", this.opt, this.name);
@@ -705,12 +714,8 @@
         EventSource;
         this.emit = emit;
         this.name = "eventsource";
-        this.opt = {
-            url: null,
-            msgid: null,
-            headers : {
-          }
-        }
+        this.opt = defaultTransportOptions();
+        this.opt.eventsource.withCredentials = false;
       }
 
       ESWrapper.prototype.setup = function() {
@@ -780,15 +785,8 @@
         this.maxLongPollTime = 5*60*1000; //5 minutes
         this.emit = emit;
         this.name = "longpoll";
-        this.opt = {
-          url: null,
-          msgid: null,
-          headers : {
-          },
-          longpoll: {
-            pollDelay: 0,
-          }
-        }
+        this.opt = defaultTransportOptions();
+        this.opt.longpoll.pollDelay = 0;
       }
 
       Longpoll.prototype.setup = function() {
@@ -938,12 +936,7 @@
         this.doNotReconnect = true;
         this.shared = null;
         this.name = "__slave";
-        this.opt = {
-          url: null,
-          msgid: null,
-          headers : {
-          }
-        }
+        this.opt = defaultTransportOptions();
       }
 
       LocalStoreSlaveTransport.prototype.setup = function() {
