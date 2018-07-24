@@ -543,7 +543,7 @@
         this.shared.setWithId("status", "connecting");
         this.transport.listen(this.url, this.lastMessageId);
         this.running = true;
-        delete this.starting;
+        this.starting = false;
         
         //master checkin interval
         this.shared.masterIntervalCheckID = global.setInterval(ughbind(function() {
@@ -553,7 +553,7 @@
       else if(this.shared.role == "slave") {
         this.transport.listen(this.url, this.shared);
         this.running = true;
-        delete this.starting;
+        this.starting = false;
         
         //slave check if master is around
         this.shared.masterIntervalCheckID = global.setInterval(ughbind(function() {
@@ -571,7 +571,7 @@
       }
       this.transport.listen(this.url, this.lastMessageId);
       this.running = true;
-      delete this.starting;
+      this.starting = false;
     }
     return this;
   };
@@ -589,7 +589,7 @@
       delete sharedSubscriberTable[this.url];
       if(this.shared.masterIntervalCheckID) {
         clearInterval(this.shared.masterIntervalCheckID);
-        delete this.shared.masterIntervalCheckID;
+        this.shared.masterIntervalCheckID = null;
       }
     }
     return this;
@@ -607,6 +607,7 @@
     "websocket": (function() {
       function WSWrapper(emit) {
         WebSocket;
+        this.listener = null;
         this.emit = emit;
         this.name = "websocket";
         this.opt = defaultTransportOptions()
@@ -703,12 +704,12 @@
         l.onerror = ughbind(function(evt) {
           //console.log("error", evt);
           this.emit("error", evt, l);
-          delete this.listener;
+          this.listener = null;
         }, this);
         
         l.onclose = ughbind(function(evt) {
           this.emit("__disconnect", evt);
-          delete this.listener;
+          this.listener = null;
         }, this);
       };
       
@@ -716,7 +717,7 @@
         if(this.listener) {
           this.emit("transportNativeBeforeDestroy", this.listener, this.name);
           this.listener.close();
-          delete this.listener;
+          this.listener = null;
         }
       };
       
@@ -726,6 +727,7 @@
     "eventsource": (function() {
       function ESWrapper(emit) {
         EventSource;
+        this.listener = null;
         this.emit = emit;
         this.name = "eventsource";
         this.opt = defaultTransportOptions();
@@ -784,7 +786,7 @@
         if(this.listener) {
           this.emit("transportNativeBeforeDestroy", this.listener, this.name);
           this.listener.close();
-          delete this.listener;
+          this.listener = null;
         }
       };
       
@@ -793,6 +795,8 @@
     
     "longpoll": (function () {
       function Longpoll(emit) {
+        this.req = null;
+        this.reqStartTime = null;
         this.pollingRequest = null;
         this.nextRequestTimer = null;
         this.longPollStartTime = null;
@@ -928,7 +932,7 @@
         if(this.req) {
           this.emit("transportNativeBeforeDestroy", this.req, this.name);
           this.req.abort();
-          delete this.req;
+          this.req = null;
         }
         this.cancelPendingPollRequest();
         return this; 
