@@ -603,6 +603,16 @@
     return url;
   }
 
+  function countKeys(obj) {
+    var size = 0, key;
+    if(obj) {
+      for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+      }
+    }
+    return size;
+  }
+  
   NchanSubscriber.prototype.SubscriberClass = {
     "websocket": (function() {
       function WSWrapper(emit) {
@@ -610,16 +620,13 @@
         this.listener = null;
         this.emit = emit;
         this.name = "websocket";
-        this.opt = defaultTransportOptions()
-        this.opt.headers["Sec-WebSocket-Protocol"]="ws+meta.nchan"
-      };
+        this.opt = defaultTransportOptions();
+        this.opt.headers["Sec-WebSocket-Protocol"]="ws+meta.nchan";
+      }
 
       WSWrapper.prototype.setup = function() {
         this.emit("transportSetup", this.opt, this.name);
-        var count = 0;
-        var property;
-        for ( property in this.opt.headers ) count++;
-        if (count != 1 && "Sec-WebSocket-Protocol" in this.opt.headers) {
+        if (countKeys(this.opt.headers) != 1 && "Sec-WebSocket-Protocol" in this.opt.headers) {
           throw "WebSocket only supports one header; Sec-WebSocket-Protocol";
         }
       };
@@ -689,7 +696,7 @@
               var m = reader.result.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
               this.emit("message", evt.data.slice(m[0].length), {"id": m[1], "content-type": m[3]});
             }, this));
-            reader.readAsText(headerSlice)
+            reader.readAsText(headerSlice);
           } else {
             var m = evt.data.match(/^id: (.*)\n(content-type: (.*)\n)?\n/m);
             this.emit("message", evt.data.substr(m[0].length), {"id": m[1], "content-type": m[3]});
@@ -736,10 +743,7 @@
 
       ESWrapper.prototype.setup = function() {
         this.emit("transportSetup", this.opt, this.name);
-        var count = 0;
-        var property;
-        for ( property in this.opt.headers ) count++;
-        if (count != 0) {
+        if (countKeys(this.opt.headers) != 0) {
           throw "EventSource does not support headers";
         }
       };
@@ -809,9 +813,6 @@
 
       Longpoll.prototype.setup = function() {
         this.emit("transportSetup", this.opt, this.name);
-        var count = 0;
-        var property;
-        for ( property in this.opt.headers ) count++;
       };
 
       Longpoll.prototype.listen = function(url, msgid) {
@@ -959,10 +960,7 @@
 
       LocalStoreSlaveTransport.prototype.setup = function() {
         this.emit("transportSetup", this.opt, this.name);
-        var count = 0;
-        var property;
-        for ( property in this.opt.headers ) count++;
-        if (count != 0) {
+        if(countKeys(this.opt.headers) != 0) {
           throw "__slave does not support headers";
         }
       };
